@@ -1,4 +1,4 @@
-from langchain_core.documents import Document
+from langchain.schema import Document
 from datetime import datetime, timezone, timedelta
 import re
 
@@ -61,15 +61,32 @@ def parse_chunk_text(chunk_text: str, default_metadata: dict = None):
     wib = timezone(timedelta(hours=7))
     metadata.setdefault("uploaded_date", datetime.now(tz=wib).strftime("%Y-%m-%d %H:%M:%S"))
 
+    header_title = re.search(r"document_title:\s*(.*)", chunk_text)
+    header_topic = re.search(r"document_topic:\s*(.*)", chunk_text)
+    header_desc = re.search(r"chunk_description:\s*(.*)", chunk_text)
+    print(header_title)
+    print("--------------------")
+    print(header_topic)
+    print("--------------------")
+    print(header_desc)
+    title = header_title.group(1).strip()
+    topic = header_topic.group(1).strip()
+    desc = header_desc.group(1).strip()
+    print(topic)
+
+    # --- Deteksi pola FAQ ---
     faq_pattern = r"Q:\s*(.*?)\s*A:\s*(.*?)(?=\s*Q:|\Z)"
     matches = re.findall(faq_pattern, main_text, flags=re.S)
-    title = metadata.get("title", "")
-    topic = metadata.get("topic", "")
-    desc = metadata.get("description", "")
+
     docs = []
     if matches:
         for i, (q, a) in enumerate(matches):
-            qa_text = f"Judul Dokumen: {title}\nTopik: {topic}\nDeskripsi: {desc}\nQ: {q.strip()}\nA: {a.strip()}"
+            qa_text = (
+                f"document_title: {title}\n"
+                f"document_topic: {topic}\n"
+                f"chunk_description: {desc}\n"
+                f"Q: {q.strip()}\nA: {a.strip()}"
+            )
             faq_meta = metadata.copy()
             faq_meta["chunk_index"] = i
             docs.append(Document(page_content=qa_text, metadata=faq_meta))
