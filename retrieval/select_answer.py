@@ -37,7 +37,7 @@ if you think many best descriptions matches the user queries, output should be l
 </user_query>
 """
     payload = {"model": os.getenv('LLM_MODEL'), "prompt": prompt, "stream": False}
-    response = requests.post("http://localhost:11434/api/generate", json=payload)
+    response = requests.post(f"{os.getenv("OLLAMA_BASE_URL")}api/generate", json=payload)
     response.raise_for_status()
     data = response.json()
     print("Exiting select_answer method")

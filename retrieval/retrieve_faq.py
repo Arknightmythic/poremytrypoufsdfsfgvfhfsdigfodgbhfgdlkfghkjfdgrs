@@ -4,7 +4,7 @@ from qdrant_client import QdrantClient
 
 load_dotenv()
 
-async def retrieve_faq(query_vector: list[float], threshold: float = 0.97, client=None):
+async def retrieve_faq(query_vector: list[float], threshold: float = 1, client=None):
     print("[INFO] Entering retrieve_faq method")
 
     if client is None:

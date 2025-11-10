@@ -5,40 +5,71 @@ import requests
 load_dotenv()
 
 async def classify_collection(user_query: str, history_context: str) -> str:
-    print("Entering generate_answer method")
+    print("Entering classify_collection method")
     prompt = """
 <introduction>
-You are an assistant for the Virtual Assistant of BKPM (Badan Koordinasi Penanaman Modal).
-Your task will be to classify user's query into different types of request related to BKPM.
-You will receive <user_query> to be classified.
-You will receive <context> for added context to help you classify the query.
-<context> is the chat history of you and this user.
+You are an expert customer service in Indonesia's Coordinating Board (Badan Koordinasi Penanaman Modal or BKPM), excelling in categorizing a customer's question.
+Your task is to determine to which category the customer's question/query/request is, based on a given description about each category.
+You will receive <user_query> to be classified. The user_query is in *Bahasa Indonesia*
+You will receive <context> for added context to help you classify the query, <context> is the chat history of you and this user.
 </introduction>
 
 <guide>
-if the query is about "tata cara" or "panduan", output:
-panduan_collection
+There will be four main categories in for user's query:
+<uraian>
+1. Uraian
+   - User question is categorized to this if it involves the content details given below:
+     > Laporan Kegiatan Penanaman Modal (LKPM): Laporan berkala terkait pelaksanaan kegiatan usaha dan realisasi investasi.
+     > Mekanisme Pengawasan: Proses untuk memastikan kegiatan usaha berjalan sesuai aturan yang berlaku.
+     > Regulasi: Dasar hukum terkait pelaksanaan OSS Indonesia.
+     > Klasifikasi Baku Lapangan Usaha Indonesia (KBLI): Pengelompokan bidang usaha untuk menentukan jenis izin yang anda butuhkan.
+     > Bidang Usaha Penanaman Modal (BUPM): Kategorisasi kegiatan usaha yang melibatkan investasi, baik dari dalam atau luar negeri.
+   - Categorize as uraian also when the question is more industry-specific, meaning the user's question is about a certain field or business.
+</uraian>
 
-if the query is about "peraturan", output:
-peraturan_collection
+<panduan>
+2. Panduan
+   - User question is categorized to this if it is about something relating to step-by-step that the user must do and does not contain anything related to <uraian>.
+   - The contents usually involves anything relating to applying business license, a tutorial to configure or register something on a website/portal, tax-related procedure, etc.
+   - The notable keywords are: tata cara, panduan, cara, langkah-langkah, bagaimana cara.
+</panduan>
 
-if the query is about "definisi" or "arti", output:
-uraian_collection
+<peraturan>
+3. Peraturan
+   - User question is categorized to this if it is about rules, law, or the requirements for business or investment and does not contain anything related to <uraian>.
+   - The contents are filled with documents of law, regulation, and announcement about rules involving business and investments that the user should adhere to.
+   - description about the content:
+     > Jaringan Dokumentasi dan Informasi Hukum adalah suatu sistem pendayagunaan bersama peraturan perundang-undangan dan bahan dokumentasi hukum lainnya secara tertib, terpadu dan berkesinambungan serta merupakan sarana pemberian pelayanan informasi hukum secara mudah, cepat, dan akurat.
+   - The notable keywords are: peraturan, hukum, pasal, ayat, perizinan, izin, pemerintah.
+</peraturan>
 
-if the query is a request to chat with a human agent/customer service/helpdesk, output:
-helpdesk
-if the query is about general or everyday knowledge (such as cooking, health, lifestyle, entertainment, sports, weather, or any topic unrelated to investment, licensing, or BKPM services),
-output:
-skip_collection_check
+<helpdesk>
+4. Helpdesk
+   - User query is categorized to this if the user asked to talk to a human agent or asked to be connected to a helpdesk.
+   - Because the system that you are in also allows chat to a human agent.
+   - Keywords: agen, agent, helpdesk, customer service, layanan bantuan.
+</helpdesk>
 </guide>
 
+<output>
+Output:
+If the query is classified as "Panduan", output: panduan_collection
+If the query is classified as "Peraturan", output: peraturan_collection
+If the query is classified as "Uraian", output: uraian_collection
+If the query is classified as "Helpdesk", output: helpdesk
+However, if user's query is not related to anything involving BKPM or the topic sorrounding business or investment, please output: skip_collection_check
+</output>
+
 <instructions>
+Additional instructions:
 - Input will be in Bahasa Indonesia.
-- Your output must be in Bahasa Indonesia too.
 - You must follow the given <guide> to classify the query.
 - You can use <context> to help classification process in case <user_query> needs more context.
 - You may not use <context> if it is blank.
-- If you output "skip_collection_check", it means the query is unrelated to BKPM and should not be processed against any document collection.
+- Only output the phrase like instructed and NOTHING ELSE.
+- Categorize based on which category make the most sense.
+- Do not limit yourself to the given notable keywords, those are just for giving ideas.
+- You MUST adhere to every guide and isntruction givne before.
 </instructions>
 """
     user = f"""
@@ -64,9 +95,9 @@ skip_collection_check
         ],
         "stream": False
         }
-    response = requests.post("http://localhost:11434/api/chat", json=payload)
+    response = requests.post("http://103.67.43.244:11434/api/chat", json=payload)
     response.raise_for_status()
     data = response.json()
-    print("Exiting generate_answer method")
+    print("Exiting classify_collection method")
     message = data.get("message", {})
     return message.get("content", "").strip()

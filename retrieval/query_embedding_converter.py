@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from ollama import Client
 
 load_dotenv()
-ollama = Client()
+ollama = Client(host=os.getenv("OLLAMA_BASE_URL"))
 
 async def convert_to_embedding(user_query: str):
     print("Entering convert_to_embedding method")

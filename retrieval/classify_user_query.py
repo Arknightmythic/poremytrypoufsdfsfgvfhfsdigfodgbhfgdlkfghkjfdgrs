@@ -336,7 +336,7 @@ Remember: Output ONLY the JSON object, use EXACT category names from the list.""
     }
     
     try:
-        response = requests.post("http://localhost:11434/api/chat", json=payload, timeout=30)
+        response = requests.post(f"{os.getenv("OLLAMA_BASE_URL")}api/chat", json=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
         content = data.get("message", {}).get("content", "").strip()

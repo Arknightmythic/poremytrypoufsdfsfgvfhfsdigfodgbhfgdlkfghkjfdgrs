@@ -1,4 +1,4 @@
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 def recursive_chunking(text, chunk_size=2000, chunk_overlap=300):
     splitter = RecursiveCharacterTextSplitter(

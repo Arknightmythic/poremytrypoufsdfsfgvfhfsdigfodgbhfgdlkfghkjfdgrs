@@ -92,12 +92,12 @@ def get_by_session_id(session_id: str) -> BaseChatMessageHistory:
 
     sync_connection.autocommit = True
 
-    with sync_connection.cursor() as cur:
-        cur.execute("SHOW search_path;")
-        print("Current search_path:", cur.fetchone())
+    # with sync_connection.cursor() as cur:
+    #     cur.execute("SHOW search_path;")
+    #     print("Current search_path:", cur.fetchone())
 
-        cur.execute("SELECT to_regclass('chat_history');")
-        print("Table visible to connection:", cur.fetchone())
+    #     cur.execute("SELECT to_regclass('chat_history');")
+    #     print("Table visible to connection:", cur.fetchone())
 
     return PostgresChatMessageHistory(table_name, session_id, sync_connection=sync_connection)
 

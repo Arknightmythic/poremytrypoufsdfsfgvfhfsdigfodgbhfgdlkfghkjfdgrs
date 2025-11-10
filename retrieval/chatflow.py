@@ -1,4 +1,5 @@
 import uuid, json
+import time
 from .entity.chat_request import ChatRequest
 from .generate_answer import generate_answer
 from .knowledge_retrieval import retrieve_knowledge
@@ -47,45 +48,43 @@ class ChatflowHandler:
             context = await self.context(ret_conversation_id)
 
         rewritten= await self.rewriter(user_query=req.query, history_context=context)
-
         embedded_query = await self.converter(rewritten)
 
-        faq_result = await retrieve_faq(embedded_query, threshold=0.97)
-        if faq_result["matched"]:
-            print(f"[INFO] FAQ matched with score {faq_result['score']}")
-            citations = [faq_result["filename"]] if faq_result.get("filename") else []
-            answer = await self.llm(req.query, [faq_result["answer"]], ret_conversation_id)
+        # faq_result = await retrieve_faq(embedded_query, threshold=1)
+        # if faq_result["matched"]:
+        #     print(f"[INFO] FAQ matched with score {faq_result['score']}")
+        #     citations = [faq_result["filename"]] if faq_result.get("filename") else []
+        #     answer = await self.llm(req.query, [faq_result["answer"]], ret_conversation_id)
 
-            category = await self.categorize(ret_conversation_id, req.query, "faq_collection")
+        #     category = await self.categorize(ret_conversation_id, req.query, "faq_collection")
 
-            question_classify = await self.question_classifier(rewritten)
-            q_category = await self.categorize_question(
-                ret_conversation_id, 
-                req.query,
-                question_classify.get("category"),
-                question_classify.get("sub_category")
-            )
-            is_answered = await flag_answered_validation(
-                session_id=ret_conversation_id,
-                user_question=req.query,
-                threshold=0.85
-            )
+        #     question_classify = await self.question_classifier(rewritten)
+        #     q_category = await self.categorize_question(
+        #         ret_conversation_id, 
+        #         req.query,
+        #         question_classify.get("category"),
+        #         question_classify.get("sub_category")
+        #     )
+        #     is_answered = await flag_answered_validation(
+        #         session_id=ret_conversation_id,
+        #         user_question=req.query,
+        #         threshold=0.85
+        #     )
 
-            return {
-                "user": req.platform_unique_id,
-                "conversation_id": ret_conversation_id,
-                "query": req.query,
-                "rewritten_query": rewritten,
-                "category": category,
-                "question_category": q_category,
-                "answer": answer,
-                "citations": citations,
-                "is_helpdesk": False,
-                "is_answered": True
-            }
+        #     return {
+        #         "user": req.platform_unique_id,
+        #         "conversation_id": ret_conversation_id,
+        #         "query": req.query,
+        #         "rewritten_query": rewritten,
+        #         "category": category,
+        #         "question_category": q_category,
+        #         "answer": answer,
+        #         "citations": citations,
+        #         "is_helpdesk": False,
+        #         "is_answered": True
+        #     }
 
         collection_choice = await self.classifier(req.query, context)
-
 
         if collection_choice == "helpdesk":
             return {
@@ -110,8 +109,11 @@ class ChatflowHandler:
             "citations": "",
             "is_helpdesk": False
         }
-
+        start_time = time.perf_counter()
         docs = await self.retriever(embedded_query, collection_choice)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Code block took {elapsed_time} seconds.")
         
         texts = []
         filenames = []
@@ -122,14 +124,11 @@ class ChatflowHandler:
                 filenames.append(meta.get("filename") or meta.get("file_id") or "unknown_source")
 
         reranked, reranked_files = await self.rerank(rewritten, texts, filenames)
-       
-        answer = await self.llm(req.query, reranked, ret_conversation_id)
-
         
+        answer = await self.llm(req.query, reranked, ret_conversation_id)
         category = await self.categorize(ret_conversation_id, req.query, collection_choice)
 
         question_classify = await self.question_classifier(rewritten)
-        print("line 118")
         q_category = await self.categorize_question(
             ret_conversation_id, 
             req.query,

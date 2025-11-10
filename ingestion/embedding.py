@@ -4,7 +4,7 @@ from typing import List
 from langchain_community.vectorstores import Qdrant
 from langchain_ollama import OllamaEmbeddings
 from qdrant_client import QdrantClient
-from langchain.schema import Document
+from langchain_core.documents import Document
 from dotenv import load_dotenv
 
 load_dotenv()
