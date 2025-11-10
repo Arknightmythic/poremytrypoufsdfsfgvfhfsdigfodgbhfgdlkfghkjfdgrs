@@ -46,7 +46,9 @@ class PDFExtractorHandler:
             "prompt": ExtractPDFPrompts.SYSTEM_PROMPT,
             "stream": False,
             "images": [image_b64],
-            "temperature": self.temperature,
+            "options": {
+                "temperature": 0.0 
+            }
         }
 
         try:
@@ -55,7 +57,6 @@ class PDFExtractorHandler:
                     f"{self.base_url}/api/generate", 
                     json=payload
                 )
-            # response = requests.post(f"{self.base_url}/api/generate", json=payload, timeout=600)
                 response.raise_for_status()
                 data = response.json()
                 return data.get("response", "").strip()
