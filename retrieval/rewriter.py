@@ -52,6 +52,6 @@ Your role will be as an expert query rewriter, whose task is to rephrase or rema
     response = requests.post(f"{os.getenv("OLLAMA_BASE_URL")}api/chat", json=payload)
     response.raise_for_status()
     data = response.json()
-    print("Exiting generate_answer method")
+    print("Exiting rewrite_query method")
     message = data.get("message", {})
     return message.get("content", "").strip()

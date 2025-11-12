@@ -16,6 +16,7 @@ from .flag_answered_validation import flag_answered_validation
 from .retrieve_faq import retrieve_faq
 from .classify_user_query import classify_user_query
 from .ingest_question_category import ingest_question_category
+from .rerank_new import rerank_documents
 
 class ChatflowHandler:
     def __init__(self):
@@ -26,6 +27,7 @@ class ChatflowHandler:
         self.converter = convert_to_embedding
         self.retriever = retrieve_knowledge
         self.rerank = rerank_documents_with_flag
+        self.rerank_new = rerank_documents
         self.llm = generate_answer
         self.flag = flag_message
         self.categorize = ingest_category
@@ -123,8 +125,8 @@ class ChatflowHandler:
                 meta = d.get("metadata", {})
                 filenames.append(meta.get("filename") or meta.get("file_id") or "unknown_source")
 
-        reranked, reranked_files = await self.rerank(rewritten, texts, filenames)
-        
+        reranked, reranked_files = await self.rerank_new(rewritten, texts, filenames)
+
         answer = await self.llm(req.query, reranked, ret_conversation_id)
         category = await self.categorize(ret_conversation_id, req.query, collection_choice)
 

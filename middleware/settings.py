@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     dbport: int
 
     api_key_secret: str
+    rerank_url: str
 
     class Config:
         env_file = ".env"
