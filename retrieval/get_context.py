@@ -8,6 +8,9 @@ limit = 10
 async def get_context(session_id: str):
     print("Getting conversation context...")
 
+    if session_id == "":
+        return "Conversation History:"
+
     conn = psycopg.connect(
         dbname=os.getenv("DBNAME"),
         user=os.getenv("DBUSER"),

@@ -44,24 +44,25 @@ class ChatflowHandler:
         print("Entering chatflow_call method")
         ret_conversation_id = req.conversation_id
         initial_message = ""
-        context = ""
+        context = await self.context(ret_conversation_id)
 
-        if(ret_conversation_id == ""):
-            ret_conversation_id = str(uuid.uuid4())
+        if context == "Conversation History:":
+            if ret_conversation_id == "":
+                ret_conversation_id = str(uuid.uuid4())
             await self.new_conv(ret_conversation_id, req.platform, req.platform_unique_id)
             tz = pytz.timezone("Asia/Jakarta")
             now = datetime.now(tz)
             hour = now.hour
             if 4 <= hour < 11:
-                initial_message = "Selamat pagi, terima kasih telah menguhubngi layanan bantuan BKPM!"
+                initial_message = "Selamat pagi, terima kasih telah menguhubngi layanan bantuan BKPM!\n\n"
             elif 11 <= hour < 15:
-                initial_message = "Selamat siang, terima kasih telah menguhubngi layanan bantuan BKPM!"
+                initial_message = "Selamat siang, terima kasih telah menguhubngi layanan bantuan BKPM!\n\n"
             elif 15 <= hour < 18:
-                initial_message = "Selamat sore, terima kasih telah menguhubngi layanan bantuan BKPM!"
+                initial_message = "Selamat sore, terima kasih telah menguhubngi layanan bantuan BKPM!\n\n"
             else:
-                initial_message = "Selamat malam, terima kasih telah menguhubngi layanan bantuan BKPM!"
-        else:
-            context = await self.context(ret_conversation_id)
+                initial_message = "Selamat malam, terima kasih telah menguhubngi layanan bantuan BKPM!\n\n"
+        # else:
+        #     context = await self.context(ret_conversation_id)
 
         rewritten= await self.rewriter(user_query=req.query, history_context=context)
         embedded_query = await self.converter(rewritten)
@@ -109,7 +110,7 @@ class ChatflowHandler:
             "query": req.query,
             "rewritten_query": rewritten,
             "category": "",
-            "answer": f"{initial_message}\n\n" + "Mohon maaf, untuk sekarang layanan agen helpdesk tidak tersedia.\nmohon kunjungi kantor BKPM terdekat atau email ke layananbkpm@bkpm.co.id",
+            "answer": f"{initial_message}" + "Mohon maaf, untuk sekarang layanan agen helpdesk tidak tersedia.\nmohon kunjungi kantor BKPM terdekat atau email ke layananbkpm@bkpm.co.id",
             "citations": "",
             "is_helpdesk": False
         }
@@ -175,7 +176,7 @@ class ChatflowHandler:
                     "rewritten_query": rewritten,
                     "category": category,
                     "question_category": q_category,
-                    "answer": f"{initial_message}\n\n" + answer + f"{suffix_message}",
+                    "answer": f"{initial_message}" + answer + f"{suffix_message}",
                     "citations": reranked_files,
                     "is_helpdesk": False,
                     "is_answered": None 
@@ -188,7 +189,7 @@ class ChatflowHandler:
             "rewritten_query": rewritten,
             "category": category,
             "question_category": q_category,
-            "answer": f"{initial_message}\n\n" + answer + "\n\nJawaban ini dibuat oleh AI dan mungkin tidak selalu akurat. Mohon gunakan sebagai referensi dan lakukan pengecekan tambahan bila diperlukan.",
+            "answer": f"{initial_message}" + answer + "\n\nJawaban ini dibuat oleh AI dan mungkin tidak selalu akurat. Mohon gunakan sebagai referensi dan lakukan pengecekan tambahan bila diperlukan.",
             "citations": reranked_files,
             "is_helpdesk": False,
             "is_answered": None
