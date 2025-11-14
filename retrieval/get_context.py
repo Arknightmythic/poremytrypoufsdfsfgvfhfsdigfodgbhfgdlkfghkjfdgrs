@@ -46,5 +46,5 @@ async def get_context(session_id: str):
     history_string = "\n".join(context_parts)
 
     print("Conversation context retrieved! ")
-    print("===========================\n" + history_string.strip())
+    # print("===========================\n" + history_string.strip())
     return history_string.strip()
