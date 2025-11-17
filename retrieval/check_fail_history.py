@@ -19,8 +19,9 @@ async def check_fail_history(session_id:str):
     SELECT is_cannot_answer
     FROM bkpm.chat_history
     WHERE session_id = %s
+      AND message -> 'data' ->> 'type' = 'human'
     ORDER BY created_at DESC
-    LIMIT 4;
+    LIMIT 5;
     """
 
     results = []
@@ -31,10 +32,10 @@ async def check_fail_history(session_id:str):
 
     boolean_values = [row[0] for row in results]
 
-    is_all_true = (len(boolean_values) == 4) and all(val is True for val in boolean_values)
+    is_all_true = (len(boolean_values) == 5) and all(val is True for val in boolean_values)
 
     if is_all_true:
-        print("5 consecutive messages is tagged as 'Cannot Answer', redirecting into helpdesk...")
+        print("5 consecutive messages is tagged as 'Cannot Answer', redirecting...")
     else:
         print("5 consecutive messages is not tagged as 'Cannot Answer', continuing conversation...")
 

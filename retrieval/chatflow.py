@@ -55,13 +55,13 @@ class ChatflowHandler:
             now = datetime.now(tz)
             hour = now.hour
             if 4 <= hour < 11:
-                initial_message = "Selamat pagi, terima kasih telah menghubungi layanan bantuan BKPM!\n\n"
+                initial_message = "Selamat pagi, terima kasih telah menghubungi layanan bantuan Kementerian Investasi & Hilirisasi/BKPM!\n\n"
             elif 11 <= hour < 15:
-                initial_message = "Selamat siang, terima kasih telah menghubungi layanan bantuan BKPM!\n\n"
+                initial_message = "Selamat siang, terima kasih telah menghubungi layanan bantuan Kementerian Investasi & Hilirisasi/BKPM!\n\n"
             elif 15 <= hour < 18:
-                initial_message = "Selamat sore, terima kasih telah menghubungi layanan bantuan BKPM!\n\n"
+                initial_message = "Selamat sore, terima kasih telah menghubungi layanan bantuan Kementerian Investasi & Hilirisasi/BKPM!\n\n"
             else:
-                initial_message = "Selamat malam, terima kasih telah menghubungi layanan bantuan BKPM!\n\n"
+                initial_message = "Selamat malam, terima kasih telah menghubungi layanan bantuan Kementerian Investasi & Hilirisasi/BKPM!\n\n"
         # else:
         #     context = await self.context(ret_conversation_id)
 
@@ -112,7 +112,7 @@ class ChatflowHandler:
             "query": req.query,
             "rewritten_query": rewritten,
             "category": "",
-            "answer": f"{initial_message}" + "Mohon maaf, untuk sekarang layanan agen helpdesk tidak tersedia.\nmohon kunjungi kantor BKPM terdekat atau email ke kontak@oss.go.id",
+            "answer": f"{initial_message}" + "Mohon maaf, untuk sekarang layanan agen helpdesk tidak tersedia.\nmohon kunjungi kantor Kementerian Investasi & Hilirisasi/BKPM terdekat atau email ke kontak@oss.go.id",
             "citations": "",
             "is_helpdesk": False
         }
@@ -122,7 +122,7 @@ class ChatflowHandler:
             if collection_choice == "skip_collection_check":
                 basic_return = "Mohon maaf, pertanyaan tersebut berada di luar cakupan layanan kami. Silakan ajukan pertanyaan yang berkaitan dengan investasi, perizinan berusaha, atau layanan OSS agar saya dapat membantu dengan lebih tepat."
             elif collection_choice == "greeting_query":
-                basic_return = "Halo! Selamat datang di layanan BKPM, apakah ada yang bisa saya bantu?"
+                basic_return = "Halo! Selamat datang di layanan Kementerian Investasi & Hilirisasi/BKPM, apakah ada yang bisa saya bantu?"
             elif collection_choice == "thank_you":
                 basic_return = "Terima kasih! Silakan chat lagi jika ada yang ingin ditanyakan"
             return {
@@ -164,12 +164,14 @@ class ChatflowHandler:
 
         print("Exiting chatflow_call method")
 
-        if(answer.startswith('[!]') or answer.startswith('Mohon maaf, saya hanya dapat membantu terkait informasi perizinan usaha, regulasi, dan investasi.')):
+        if(answer.startswith('Mohon maaf, saya hanya dapat membantu terkait informasi perizinan usaha, regulasi, dan investasi.')):
             await self.flag(ret_conversation_id, req.query)
             status = await self.checker(ret_conversation_id)
-            suffix_message = "\n\nUntuk bantuan lebih lanjut, anda bisa kunjungi kantor BKPM terdekat atau email ke kontak@oss.go.id"
-            if answer.startswith('[!]'):
-                suffix_message = "\n\n*Jawaban ini dibuat oleh AI dan mungkin tidak selalu akurat. Mohon gunakan sebagai referensi dan lakukan pengecekan tambahan bila diperlukan.*"
+            if status:
+                suffix_message = "Mohon maaf, pertanyaan tersebut belum bisa kami jawab. Silakan ajukan pertanyaan lain.\n\nUntuk bantuan lebih lanjut, anda bisa kunjungi kantor Kementerian Investasi & Hilirisasi/BKPM terdekat atau email ke kontak@oss.go.id"
+                fail_answer = initial_message + suffix_message
+            else:
+                fail_answer = initial_message + answer
             return {
                 "user": req.platform_unique_id,
                 "conversation_id": ret_conversation_id,
@@ -177,7 +179,7 @@ class ChatflowHandler:
                 "rewritten_query": rewritten,
                 "category": category,
                 "question_category": q_category,
-                "answer": f"{initial_message}" + answer + f"{suffix_message}",
+                "answer": fail_answer,
                 "citations": [],
                 "is_helpdesk": False,
                 "is_answered": None 
