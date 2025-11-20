@@ -1,5 +1,8 @@
 import os
+from dotenv import load_dotenv
 import asyncpg
+
+load_dotenv()
 
 DBNAME=os.getenv("DBNAME")
 DBUSER=os.getenv("DBUSER")

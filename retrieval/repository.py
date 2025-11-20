@@ -3,7 +3,7 @@ import datetime
 
 class ChatflowRepository:
     def __init__(self):
-        self.history_limit=5
+        self.history_limit=6
         print("ChatflowRepository Initiated")
 
     async def create_new_conversation(self, session_id:str, platform:str, user_id:str):
@@ -45,7 +45,7 @@ class ChatflowRepository:
         query = """
         SELECT message ->> 'type' AS type, message -> 'data' ->> 'content' AS content
         FROM bkpm.chat_history WHERE session_id = $1
-        ORDER BY created_at DESC LIMIT $2
+        ORDER BY id DESC LIMIT $2
         """
         async with pool.acquire() as conn:
             rows = await conn.fetch(query, session_id, self.history_limit)
@@ -57,8 +57,9 @@ class ChatflowRepository:
             {i + 1}. type: {row['type']}
             content: {row['content']}
             """
+            context_parts.append(block)
         history_string = "\n".join(context_parts)
-
+        print(history_string.strip())
         print("Conversation context retrieved!")
         return history_string.strip()
     
@@ -75,6 +76,32 @@ class ChatflowRepository:
         async with pool.acquire() as conn:
             await conn.execute(query, session_id)
         print("Exiting increment_helpdesk_count method")
+
+    async def get_revision(self, id: int):
+        print("Entring get_revision method")
+
+        query = """
+        SELECT revision FROM bkpm.chat_history WHERE id = $1
+        """
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            revision = await conn.fetchval(query, id)
+            print("Exiting get_revision method")
+            return revision
+        
+    async def flag_message_is_answered(self, session_id: str, question: str):
+        print("Entering flag_message_is_answered method")
+        query = """
+        UPDATE bkpm.chat_history
+        SET is_answered = TRUE
+        WHERE session_id = $1
+            AND message -> 'data' ->> 'content' = $2
+            AND message -> 'data' ->> 'type' = 'human';
+        """
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(query, session_id, question)
+        print("Exiting flag_message_is_answered method")
     
     async def flag_message_cannot_answer(self, session_id:str, question: str):
         print("Entering flag_message_cannot_answer method")

@@ -1,7 +1,10 @@
+import os
 import uuid, json
 import time
 from datetime import datetime
 import pytz
+from dotenv import load_dotenv
+from util.qdrant_connection import vectordb_client
 from .entity.chat_request import ChatRequest
 from .generate_answer import generate_answer
 from .knowledge_retrieval import retrieve_knowledge
@@ -12,8 +15,13 @@ from .classify_user_query import classify_user_query
 from .rerank_new import rerank_documents
 from .repository import ChatflowRepository
 
+load_dotenv()
 class ChatflowHandler:
     def __init__(self):
+        self.qdrant_faq_name = os.getenv("QNA_COLLECTION")
+        self.faq_limit = 3
+        self.faq_threshold = 0.6
+
         self.rewriter = rewrite_query
         self.classifier = classify_collection
         self.converter = convert_to_embedding
@@ -22,8 +30,59 @@ class ChatflowHandler:
         self.llm = generate_answer
         self.question_classifier = classify_user_query
         self.repository = ChatflowRepository()
-
         print("Chatflow handler initialized")
+
+    async def retrieve_faq(self, query_vector: list[float]):
+        print("[INFO] Entering retrieve_faq method")
+        limit = self.faq_limit
+
+        results = await vectordb_client.search(
+            collection_name=self.qdrant_faq_name,
+            query_vector=query_vector,
+            limit=limit
+        )
+
+        if not results:
+            print("[INFO] No FAQ results found")
+            return {"matched": False, "answer": None, "score": 0.0}
+        print(f"Score: {results[0].score}")
+        if results[0].score < self.faq_threshold:
+            print(f"FAQ confidence is too low! {results[0].score}")
+            return {"matched": False, "answer": None, "citations": []}
+        
+        faq_results = []
+        file_ids = []
+        for result in results:
+            score = result.score
+            question_text = result.payload.get("page_content")
+            metadata = result.payload.get("metadata")
+            file_id = metadata.get("file_id")
+            answer = metadata.get("answer", None)
+            if answer:
+                print(answer)
+                if file_id not in file_ids:
+                    file_ids.append(file_id)
+            elif answer == None:
+                print("Knowledge is from validation")
+                chat_id = int(file_id.split("-", 1)[1].strip())
+                answer = await self.repository.get_revision(chat_id)
+
+            faq_results.append((score,question_text,answer))
+
+        formatted = []
+        for score, question_text, answer in faq_results:
+            block = f"Q: {question_text}\nA: {answer}"
+            formatted.append(block)
+
+        result_string = "\n---\n".join(formatted)
+        # print(result_string)
+        print("FAQ Matched!")
+        return {
+            "matched": True,
+            "faq_string": result_string,
+            "file_ids": file_ids,
+        }
+            
 
     async def chatflow_call(self, req: ChatRequest):
         print("Entering chatflow_call method")
@@ -51,40 +110,6 @@ class ChatflowHandler:
         rewritten= await self.rewriter(user_query=req.query, history_context=context)
         embedded_query = await self.converter(rewritten)
         await self.repository.give_conversation_title(session_id=ret_conversation_id, rewritten=rewritten)
-
-        # faq_result = await retrieve_faq(embedded_query, threshold=1)
-        # if faq_result["matched"]:
-        #     print(f"[INFO] FAQ matched with score {faq_result['score']}")
-        #     citations = [faq_result["filename"]] if faq_result.get("filename") else []
-        #     answer = await self.llm(req.query, [faq_result["answer"]], ret_conversation_id)
-
-        #     category = await self.categorize(ret_conversation_id, req.query, "faq_collection")
-
-        #     question_classify = await self.question_classifier(rewritten)
-        #     q_category = await self.categorize_question(
-        #         ret_conversation_id, 
-        #         req.query,
-        #         question_classify.get("category"),
-        #         question_classify.get("sub_category")
-        #     )
-        #     is_answered = await flag_answered_validation(
-        #         session_id=ret_conversation_id,
-        #         user_question=req.query,
-        #         threshold=0.85
-        #     )
-
-        #     return {
-        #         "user": req.platform_unique_id,
-        #         "conversation_id": ret_conversation_id,
-        #         "query": req.query,
-        #         "rewritten_query": rewritten,
-        #         "category": category,
-        #         "question_category": q_category,
-        #         "answer": answer,
-        #         "citations": citations,
-        #         "is_helpdesk": False,
-        #         "is_answered": True
-        #     }
 
         collection_choice = await self.classifier(req.query, context)
 
@@ -119,24 +144,27 @@ class ChatflowHandler:
             "citations": "",
             "is_helpdesk": False
         }
-        start_time = time.perf_counter()
-        docs = await self.retriever(embedded_query, collection_choice)
-        end_time = time.perf_counter()
-        elapsed_time = end_time - start_time
-        print(f"Code block took {elapsed_time} seconds.")
-        
-        texts = []
-        filenames = []
-        for d in docs:
-            if "page_content" in d:
-                texts.append(d["page_content"])
-                meta = d.get("metadata", {})
-                filenames.append(meta.get("filename") or meta.get("file_id") or "unknown_source")
 
-        reranked, reranked_files = await self.rerank_new(rewritten, texts, filenames)
-
-        answer = await self.llm(req.query, reranked, ret_conversation_id)
         category = await self.repository.ingest_category(ret_conversation_id, req.query, collection_choice)
+
+        faq_response = await self.retrieve_faq(embedded_query)
+        if faq_response["matched"]:
+            citations = faq_response["file_ids"]
+            answer = await self.llm(req.query, faq_response["faq_string"], ret_conversation_id)
+            await self.repository.flag_message_is_answered(ret_conversation_id, req.query)
+        else:
+            docs = await self.retriever(embedded_query, collection_choice)
+
+            texts = []
+            filenames = []
+            for d in docs:
+                if "page_content" in d:
+                    texts.append(d["page_content"])
+                    meta = d.get("metadata", {})
+                    filenames.append(meta.get("filename") or meta.get("file_id") or "unknown_source")
+            reranked, citations = await self.rerank_new(rewritten, texts, filenames)
+
+            answer = await self.llm(req.query, reranked, ret_conversation_id)
 
         question_classify = await self.question_classifier(rewritten)
         q_category = await self.repository.ingest_question_category(
@@ -177,7 +205,7 @@ class ChatflowHandler:
             "category": category,
             "question_category": q_category,
             "answer": f"{initial_message}" + answer + "\n\n*Jawaban ini dibuat oleh AI dan mungkin tidak selalu akurat. Mohon gunakan sebagai referensi dan lakukan pengecekan tambahan bila diperlukan.*",
-            "citations": reranked_files,
+            "citations": citations,
             "is_helpdesk": False,
             "is_answered": None
         }
