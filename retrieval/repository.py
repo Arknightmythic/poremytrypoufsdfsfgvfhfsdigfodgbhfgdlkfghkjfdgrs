@@ -176,7 +176,8 @@ class ChatflowRepository:
         query = """
             UPDATE bkpm.conversations
             SET context = $1
-            WHERE id = $2;
+            WHERE id = $2
+            AND context IS NULL;
         """
 
         pool = await get_pool()

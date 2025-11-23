@@ -1,12 +1,13 @@
 import os
 from dotenv import load_dotenv
+from urllib.parse import quote
 import asyncpg
 
 load_dotenv()
 
 DBNAME=os.getenv("DBNAME")
 DBUSER=os.getenv("DBUSER")
-DBPASSWORD=os.getenv("DBPASSWORD")
+DBPASSWORD=quote(os.getenv("DBPASSWORD"), safe="")
 DBHOST=os.getenv("DBHOST")
 DBPORT=os.getenv("DBPORT")
 
