@@ -75,7 +75,6 @@ class ChatflowHandler:
             formatted.append(block)
 
         result_string = "\n---\n".join(formatted)
-        # print(result_string)
         print("FAQ Matched!")
         return {
             "matched": True,
@@ -121,9 +120,9 @@ class ChatflowHandler:
                 "query": req.query,
                 "rewritten_query": rewritten,
                 "category": "",
-                "answer": f"{initial_message}" + "Mohon maaf, untuk sekarang layanan agen helpdesk tidak tersedia.\nmohon kunjungi kantor Kementerian Investasi & Hilirisasi/BKPM terdekat atau email ke kontak@oss.go.id",
+                "answer": f"{initial_message}" + "Mohon konfirmasi apabila anda ingin dihubungkan ke helpdesk",
                 "citations": "",
-                "is_helpdesk": False
+                "is_helpdesk": True
             }
 
         if collection_choice == "skip_collection_check" or collection_choice == "greeting_query" or collection_choice == "thank_you":
@@ -150,7 +149,7 @@ class ChatflowHandler:
         faq_response = await self.retrieve_faq(embedded_query)
         if faq_response["matched"]:
             citations = faq_response["file_ids"]
-            answer = await self.llm(req.query, faq_response["faq_string"], ret_conversation_id)
+            answer = await self.llm(req.query, faq_response["faq_string"], ret_conversation_id, req.platform)
             await self.repository.flag_message_is_answered(ret_conversation_id, req.query)
         else:
             docs = await self.retriever(embedded_query, collection_choice)
@@ -164,7 +163,7 @@ class ChatflowHandler:
                     filenames.append(meta.get("filename") or meta.get("file_id") or "unknown_source")
             reranked, citations = await self.rerank_new(rewritten, texts, filenames)
 
-            answer = await self.llm(req.query, reranked, ret_conversation_id)
+            answer = await self.llm(req.query, reranked, ret_conversation_id, req.platform)
 
         question_classify = await self.question_classifier(rewritten)
         q_category = await self.repository.ingest_question_category(
