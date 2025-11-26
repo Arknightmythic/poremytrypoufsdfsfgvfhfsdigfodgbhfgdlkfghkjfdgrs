@@ -82,7 +82,6 @@ class ChatflowHandler:
             "file_ids": file_ids,
         }
             
-
     async def chatflow_call(self, req: ChatRequest):
         print("Entering chatflow_call method")
         ret_conversation_id = req.conversation_id
@@ -147,8 +146,6 @@ class ChatflowHandler:
             "is_helpdesk": False
         }
 
-        category = await self.repository.ingest_category(ret_conversation_id, req.query, collection_choice)
-
         faq_response = await self.retrieve_faq(embedded_query)
         if faq_response["matched"]:
             citations = faq_response["file_ids"]
@@ -171,6 +168,7 @@ class ChatflowHandler:
             citations = list(zip(citation_id, citation_name))
             answer = await self.llm(req.query, reranked, ret_conversation_id, req.platform)
 
+        category = await self.repository.ingest_category(ret_conversation_id, req.query, collection_choice)
         question_classify = await self.question_classifier(rewritten)
         q_category = await self.repository.ingest_question_category(
             ret_conversation_id, 
@@ -201,7 +199,7 @@ class ChatflowHandler:
                 "is_helpdesk": False,
                 "is_answered": None 
             }
-
+        await self.repository.ingest_citations(citations, ret_conversation_id, req.query)
         return {
             "user": req.platform_unique_id,
             "conversation_id": ret_conversation_id,

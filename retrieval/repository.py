@@ -1,5 +1,6 @@
 from util.db_connection import get_pool
 import datetime
+import json
 
 class ChatflowRepository:
     def __init__(self):
@@ -108,9 +109,14 @@ class ChatflowRepository:
         query = """
         UPDATE bkpm.chat_history
         SET is_answered = TRUE
-        WHERE session_id = $1
-            AND message -> 'data' ->> 'content' = $2
-            AND message -> 'data' ->> 'type' = 'human';
+        WHERE id = (
+            SELECT id FROM bkpm.chat_history
+            WHERE session_id = $1
+                AND message -> 'data' ->> 'content' = $2
+                AND message -> 'data' ->> 'type' = 'human'
+            ORDER BY id DESC
+            LIMIT 1
+        );
         """
         pool = await get_pool()
         async with pool.acquire() as conn:
@@ -122,9 +128,14 @@ class ChatflowRepository:
         query = """
         UPDATE bkpm.chat_history
         SET is_cannot_answer = TRUE
-        WHERE session_id = $1
-            AND message -> 'data' ->> 'content' = $2
-            AND message -> 'data' ->> 'type' = 'human';
+        WHERE id = (
+            SELECT id FROM bkpm.chat_history
+            WHERE session_id = $1
+                AND message -> 'data' ->> 'content' = $2
+                AND message -> 'data' ->> 'type' = 'human'
+            ORDER BY id DESC
+            LIMIT 1
+        );
         """
         pool = await get_pool()
         async with pool.acquire() as conn:
@@ -133,6 +144,9 @@ class ChatflowRepository:
 
     async def ingest_category(self, session_id:str, question: str, col_name: str):
         print("Ingesting category for user's question")
+        print(f"session_id: {session_id}")
+        print(f"question: {question}")
+        print(f"col_name: {col_name}")
 
         if col_name == "panduan_collection":
             category = "panduan"
@@ -142,13 +156,18 @@ class ChatflowRepository:
             category = "uraian"
         elif col_name == "faq_collection":
             category = "faq"
-
+        print(category)
         query="""
         UPDATE bkpm.chat_history
         SET category = $1
-        WHERE session_id = $2
-            AND message -> 'data' ->> 'content' = $3
-            AND message -> 'data' ->> 'type' = 'human';
+        WHERE id = (
+            SELECT id FROM bkpm.chat_history
+            WHERE session_id = $2
+                AND message -> 'data' ->> 'content' = $3
+                AND message -> 'data' ->> 'type' = 'human'
+            ORDER BY id DESC
+            LIMIT 1
+        );
         """
 
         pool = await get_pool()
@@ -204,9 +223,14 @@ class ChatflowRepository:
         query="""
         UPDATE bkpm.chat_history
         SET question_category = $1, question_sub_category = $2
-        WHERE session_id = $3
-            AND message -> 'data' ->> 'content' = $4
-            AND message -> 'data' ->> 'type' = 'human';
+        WHERE id = (
+            SELECT id FROM bkpm.chat_history
+            WHERE session_id = $3
+                AND message -> 'data' ->> 'content' = $4
+                AND message -> 'data' ->> 'type' = 'human'
+            ORDER BY id DESC
+            LIMIT 1
+        );
         """
         pool = await get_pool()
         async with pool.acquire() as conn:
@@ -214,3 +238,27 @@ class ChatflowRepository:
 
         print(f"Message categorized as {category} and {sub_category} successfuly")
         return category, sub_category
+    
+    async def ingest_citations(self, citations: list, session_id:str, question: str):
+        print("Entering ingest_citations method...")
+
+        citations_dict = [{"id": cid, "name": cname} for cid, cname in citations]
+        json_str = json.dumps(citations_dict)
+
+        query="""
+        UPDATE bkpm.chat_history
+        SET citation = $1
+        WHERE id = (
+            SELECT id FROM bkpm.chat_history
+            WHERE session_id = $2
+                AND message -> 'data' ->> 'content' = $3
+                AND message -> 'data' ->> 'type' = 'human'
+            ORDER BY id DESC
+            LIMIT 1
+        );
+        """
+
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(query, json_str, session_id, question)
+        print("Exiting ingest_citations method...")
