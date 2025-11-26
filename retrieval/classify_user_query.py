@@ -87,8 +87,8 @@ Remember: Output ONLY the JSON object, use EXACT category names from the list.
         data = response.json()
         content = data.get("message", {}).get("content", "").strip()
 
-        content = re.sub(r'json\s*', '', content)
-        content = re.sub(r'\s*', '', content).strip()
+        content = re.sub(r'```json\s*', '', content)
+        content = re.sub(r'```\s*', '', content).strip()
 
         json_match = re.search(r'\{[^{}]*\}', content, re.DOTALL)
         if json_match:
