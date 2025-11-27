@@ -112,6 +112,7 @@ class ChatflowHandler:
         collection_choice = await self.classifier(req.query, context)
 
         if collection_choice == "helpdesk":
+            await self.repository.change_is_helpdesk(ret_conversation_id)
             await self.repository.increment_helpdesk_count(ret_conversation_id)
             return {
                 "user": req.platform_unique_id,
