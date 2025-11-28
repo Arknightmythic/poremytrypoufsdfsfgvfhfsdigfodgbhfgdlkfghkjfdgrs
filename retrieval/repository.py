@@ -13,8 +13,8 @@ class ChatflowRepository:
         now = datetime.datetime.now()
 
         query="""
-        INSERT INTO bkpm.conversations (id, start_timestamp, platform, platform_unique_id, helpdesk_count)
-        VALUES ($1, $2, $3, $4, 0)
+        INSERT INTO bkpm.conversations (id, start_timestamp, platform, platform_unique_id)
+        VALUES ($1, $2, $3, $4)
         ON CONFLICT (id) DO NOTHING;
         """
 
