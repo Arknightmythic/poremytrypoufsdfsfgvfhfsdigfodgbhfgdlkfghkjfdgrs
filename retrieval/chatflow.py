@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from util.qdrant_connection import vectordb_client
 from .entity.chat_request import ChatRequest
 from .generate_answer import generate_answer
+from .generate_helpdesk_response import generate_helpdesk_response
 from .knowledge_retrieval import retrieve_knowledge
 from .query_embedding_converter import convert_to_embedding
 from .rewriter import rewrite_query
@@ -28,6 +29,7 @@ class ChatflowHandler:
         self.retriever = retrieve_knowledge
         self.rerank_new = rerank_documents
         self.llm = generate_answer
+        self.llm_helpdesk_response = generate_helpdesk_response
         self.question_classifier = classify_user_query
         self.repository = ChatflowRepository()
         print("Chatflow handler initialized")
@@ -113,14 +115,14 @@ class ChatflowHandler:
 
         if collection_choice == "helpdesk":
             await self.repository.change_is_helpdesk(ret_conversation_id)
-            await self.repository.increment_helpdesk_count(ret_conversation_id)
+            helpdesk_response = await self.llm_helpdesk_response(req.query, ret_conversation_id)
             return {
                 "user": req.platform_unique_id,
                 "conversation_id": ret_conversation_id,
                 "query": req.query,
                 "rewritten_query": rewritten,
                 "category": "",
-                "answer": f"{initial_message}" + "Mohon konfirmasi apabila anda ingin dihubungkan ke helpdesk",
+                "answer": initial_message + helpdesk_response,
                 "citations": "",
                 "is_helpdesk": True
             }
