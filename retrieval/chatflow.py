@@ -122,7 +122,7 @@ class ChatflowHandler:
                 "query": req.query,
                 "rewritten_query": rewritten,
                 "category": "",
-                "answer": initial_message + helpdesk_response,
+                "answer": (initial_message or "") + helpdesk_response,
                 "citations": "",
                 "is_helpdesk": True
             }
